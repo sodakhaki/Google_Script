@@ -1,0 +1,187 @@
+// files
+//function OCcleanup() {
+//  var LAST_MODIFIED_TIME = 1;    //1시간 지난 것들만 건드림
+//  var OC_FOLDER_ID = "1eO2qUtDPed_fy2-0it27lK7F1XXHEx74";  //수동으로 정리되지 않은 폴더의 아이디 넣어줘야 함
+//  var SORTED_FOLDER_ID = "1Unc_mZXMIePLASIaV4nHsCR38Sj5fHIf"; // 수동으로 정리된 것이 들어갈 폴더 넣어줘야함
+  ///////////////////////////////////////////////////////// 아래는 수정하지 말 것
+
+function remove_New_Folder_Name() {
+
+  var LAST_MODIFIED_TIME = 0;     
+
+  var target = "1VPFCcLU9u6DFPTi6cyM6qsn7j1F3Cd03"                                         // 폴더 아이디  " "  안에  폴더아이디를 넣어주세요
+
+  var targetfolder = DriveApp.getFolderById(target)   //추가
+
+  var folders = targetfolder.getFolders()                        //변경
+
+  Logger.log("Start --------------------------------");
+
+
+
+
+
+while (folders.hasNext()) {
+
+    var folder = folders.next();
+
+    var hours = DateDiff.inHours(folder.getLastUpdated(), new Date());
+
+  if (!folder.isTrashed() && LAST_MODIFIED_TIME <= hours )  
+  
+   
+      Logger.log(folder.getName() + folder.getId());
+      
+      var childCount = countChildInFolder(folder.getId());
+      var parentFolders = folder.getParents();
+      var parentFirstFolder;
+      if(parentFolders.hasNext()){
+        var parentFirstFolder = parentFolders.next();
+      }
+      if(childCount == 0)
+      {
+        removeFolder(folder.getId());
+      }else if(childCount == 1 && parentFirstFolder !== "undefined"){
+        moveChildFiles(folder.getId(), parentFirstFolder.getId());
+      }else{
+        renameFolder(folder.getId());
+      }
+    
+  }
+  
+  Logger.log("End --------------------------------");
+}
+
+//function removeFolder(folderId){
+//  var folder = DriveApp.getFolderById(folderId);
+//  var parents = folder.getParents();
+//  while(parents.hasNext()){
+//    var p = parents.next();
+//    p.removeFolder(folder);
+//  }
+//  
+//  var returnedFolder = folder.setTrashed(true);
+//  Logger.log('returnedFolder is trashed: ' + returnedFolder.isTrashed());
+//}
+
+function renameFolder(folderId){
+  var folder = DriveApp.getFolderById(folderId);
+  var folderName = folder.getName();
+  var fileCount = countChildInFolder(folderId);
+  if(fileCount > 0){
+    var files = folder.getFiles();
+    var childFile = files.next();
+    var fileName = childFile.getName();
+    
+    var f = fileName.split('.');
+    Logger.log("File Name Split : " + f[0]);
+    Logger.log("Change Folder Name : " + folderName + "=>" + f[0]);
+    folder.setName(f[0]);
+  }
+  
+}
+
+function moveChildFiles(fromFolderId, toFolderId){
+  var fromFolder = DriveApp.getFolderById(fromFolderId);
+  var toFolder   = DriveApp.getFolderById(toFolderId);
+  
+  var files = fromFolder.getFiles();
+  
+  while(files.hasNext()){
+    var child = files.next();
+    child.makeCopy(child.getName(), toFolder);
+    Logger.log("Move File("+child.getName()+") : " + fromFolder.getName() + " => " + toFolder.getName()); 
+  }
+  
+// 수정전    
+//  while(files.hasNext()){
+//    var child = files.next();
+//    toFolder.addFile(child);
+//    fromFolder.removeFile(child);
+//    Logger.log("Move File("+child.getName()+") : " + fromFolder.getName() + " => " + toFolder.getName()); 
+//  }
+
+//참고자료  
+  //function moveFiles(sourceFileId, targetFolderId) {
+//    var file = DriveApp.getFileById(sourceFileId);  
+//    var targetFolder = DriveApp.getFolderById("1Unc_mZXMIePLASIaV4nHsCR38Sj5fHIf");
+//  supportsTeamDrives: true
+//      file.makeCopy(file.getName(), targetFolder);
+//  }}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  var folders = fromFolder.getFolders();
+  
+  while(folders.hasNext()){
+    var child = folders.next();
+    toFolder.addFolder(child);
+    fromFolder.removeFolder(child);
+    Logger.log("Move Folder("+child.getName()+") : " + fromFolder.getName() + " => " + toFolder.getName()); 
+  }
+  
+  //삭제
+//  removeFolder(fromFolder.getId());
+}
+
+function countChildInFolder(FolderId) {
+  var count,file,files,folders,theFolder;//Define variables without assigning a value
+
+  theFolder = DriveApp.getFolderById(FolderId);
+  files = theFolder.getFiles();
+  folders = theFolder.getFolders();
+
+  count = 0;
+
+  while (files.hasNext()) {
+   count++;
+   file = files.next();
+  }
+  
+  while(folders.hasNext()){
+    count++;
+    folders.next();
+  }
+  return count;
+}
+
+
+var DateDiff = {  
+    inHours:function(d1, d2) {
+        var t2 = d2.getTime();
+        var t1 = d1.getTime();
+
+        return parseInt((t2-t1)/(3600*1000));
+    },
+    inDays: function(d1, d2) {
+        var t2 = d2.getTime();
+        var t1 = d1.getTime();
+
+        return parseInt((t2-t1)/(24*3600*1000));
+    },
+    inWeeks: function(d1, d2) {
+        var t2 = d2.getTime();
+        var t1 = d1.getTime();
+
+        return parseInt((t2-t1)/(24*3600*1000*7));
+    },
+    inMonths: function(d1, d2) {
+        var d1Y = d1.getFullYear();
+        var d2Y = d2.getFullYear();
+        var d1M = d1.getMonth();
+        var d2M = d2.getMonth();
+
+        return (d2M+12*d2Y)-(d1M+12*d1Y);
+    },
+    inYears: function(d1, d2) {
+        return d2.getFullYear()-d1.getFullYear();
+    }
+}
